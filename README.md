@@ -21,7 +21,7 @@ experimental:
   plugins:
     jwt:
       moduleName: github.com/agilezebra/jwt-middleware
-      version: v1.4.1
+      version: v1.4.2
 ```
 
 1b. or with command-line options:
@@ -30,10 +30,10 @@ experimental:
 command:
   ...
   - "--experimental.plugins.jwt.modulename=github.com/agilezebra/jwt-middleware"
-  - "--experimental.plugins.jwt.version=v1.4.1"
+  - "--experimental.plugins.jwt.version=v1.4.2"
 ```
 
-2. Configure and activate the plugin as a middleware in your dynamic traefik config:
+2a. Configure and activate the plugin as a middleware, either in your dynamic traefik config:
 
 ```yaml
 http:
@@ -46,6 +46,27 @@ http:
           require:
             aud: test.example.com
 ```
+
+2b. or via Traefik's Kubernetes Middleware CRD:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: secure-api
+spec:
+  plugin:
+    jwt:
+      issuers:
+        - https://auth.example.com
+      require:
+        aud: test.example.com
+```
+
+Notes:
+
+* If you use the Kubernetes Middleware CRD, you should not use the `@file` suffix in the middleware references below.
+* A drawback of using the Kubernetes Middleware CRD is that you cannot use YAML aliases and anchors to keep shared config DRY across middleware definitions, as shown in the [example below](#configuring-api-and-interactive-endpoints-together-effectively).
 
 3a. Use the middleware in services via docker-compose labels
 
@@ -94,9 +115,9 @@ Name | Description
 `delayPrefetch` | Delay prefetching keys from `issuers` by the given duration (expressed in `time.ParseDuration` format - e.g. "300ms", "5s"). This is particularly useful if your openid server is behind the very traefik service that is loading the plugin and you need to give it time to be ready for your request. This has no effect if `skipPrefetch` is set.
 `refreshKeysInterval` | Arbitrarily refresh all keys from all `issuers` in a background thread every given duration (after any prefetch).
 `require` | A map of zero or more claims that must all be present and match against one or more values. If no claims are specified in `require`, all tokens that are validly signed by the trusted issuers or secrets will pass. If more than one claim is specified, each is required (i.e. an AND relationship exists for all the specified claims). For each claim, multiple values may be specified and the claim will be valid if any matches (i.e. a default OR relationship exists for required values within a claim). It is possible to specify alternate logic using `$and` and `$or` operators (see Claim Matching examples below). fnmatch-style wildcards are optionally supported for claims in issued JWTs. If you do not wish to support wildcard claims, simply do not put such wildcards into the JWTs that you issue. See below for examples and the variables available with template interpolation.
-`headerMap` | A map in the form of header -> claim. Headers will be added (or overwritten if already present) to the forwarded HTTP request from the claim values in the token. If the claim is not present (and `removeMissingHeaders` is not set - see below) no action for that value is taken (and any provided header will be passed through unchanged). It's essential to set `removeMissingHeaders` if any of these headers are treated in a security related context to prevent  
+`headerMap` | A map in the form of header -> claim. Headers will be added (or overwritten if already present) to the forwarded HTTP request from the claim values in the token. If the claim is not present (and `removeMissingHeaders` is not set - see below) no action for that value is taken (and any provided header will be passed through unchanged). It's essential to set `removeMissingHeaders` if any of these headers are treated in a security related context to prevent headers being spoofed if the token cannot always be relied upon to contain the expected claim.
 `removeMissingHeaders` | When set to `true`, remove any headers provided in the request that are named in the `headerMap` but are not present in the token as claims. This may be an important security consideration for some uses of headers if your JWT provider cannot be relied upon to provide an expected claim in all situations. Default: `false`.
-`cookieName` | Name of the cookie to retrieve the token from if present. Default: `Authorization`. If token retrieval from cookies must be disabled for some reason, set to an empty string.  If `forwardAuth` is `false`, the cookie will be removed before forwarding to the backend.
+`cookieName` | Name of the cookie to retrieve the token from if present. Default: `Authorization`. If token retrieval from cookies must be disabled for some reason, set to an empty string. If `forwardAuth` is `false`, the cookie will be removed before forwarding to the backend.
 `headerName` | Name of the Header to retrieve the token from if present. Default: `Authorization`. If token retrieval from headers must be disabled for some reason, set to an empty string. Tokens are supported either with or without a `Bearer` prefix. If `forwardAuth` is `false`, the header will be removed before forwarding to the backend.
 `parameterName` | Name of the query string parameter to retrieve the token from if present. Default: disabled. If `forwardAuth` is `false`, the query string parameter will be removed before forwarding to the backend.
 `redirectUnauthorized` | URL to redirect Unauthorized (401) claims to instead of returning a 401 status code. This is intended for interactive requests where the user should be redirected to login and then returned to the page that access was attempted from. Go template interpolation may be used to construct a `return_to`, or similar, parameter for the redirection. See examples and template variables below.
@@ -120,13 +141,13 @@ Name | Description
 `{{.Scheme}}` | https or http.
 `{{.Host}}` | Host name only, without scheme, including port if any.
 `{{.Path}}` | Path and any query string parameters.
-`{{URLQueryEscape}}` | Function: escape a variable suitable for use in a URL query (uses `url.QueryEscape`), such as `{{.URL}}` for use as a `return_to` paramater in an HTTP redirect.
+`{{URLQueryEscape}}` | Function: escape a variable suitable for use in a URL query (uses `url.QueryEscape`), such as `{{.URL}}` for use as a `return_to` parameter in an HTTP redirect.
 `{{HTMLEscape}}` | Function: escape a variable using HTML escapes (uses `html.EscapeString`).
 
 These variables are useful with dynamic claim requirements, particularly in multitenancy scenarios. However, if interpolating `Host` as a requirement, care must be taken to ensure that the service can only be reached through that hostname and not directly by some public IP. I.e. routing should be well-controlled, such as behind an API gateway, proxy or other ingress selecting on `Host`, or where all traefik rules are guaranteed to match using `Host`. Otherwise, it would be easy to spoof a different `Host` by fabricating a DNS record for that IP externally; a static requirement should be used instead in such an architecture.
 
 Additionally, all environment variables are accessible with template interpolation, which makes programmatically setting a static value in the traefik dynamic config file easier.
-Note that the per-request variables will overwrite traefiks view of an environment variable with the same name, so any shadowed environment variables need to be renamed appropriately.`
+Note that the per-request variables will overwrite traefik's view of an environment variable with the same name, so any shadowed environment variables need to be renamed appropriately.
 
 ### Claim Matching
 
@@ -208,7 +229,7 @@ require:
     $and: ["hr", "power"] # both are required
 ```
 
-Note that, similar to MongoDB, the `$and` and `$or` operators are a single-value object with operator as the key and the choices as an array value
+Note that, similar to MongoDB, the `$and` and `$or` operators are a single-value object with operator as the key and the choices as an array value.
 
 ```json
 {
@@ -226,7 +247,7 @@ require:
       - "admin" # this alone will pass
 ```
 
-Note that mixing yaml array styles here is arbitrary and both are used to enhance clarity of the structure
+Note that mixing yaml array styles here is arbitrary and both are used to enhance clarity of the structure.
 
 ```json
 {
@@ -397,9 +418,23 @@ http:
             aud: projects/123456789
 ```
 
-## Forking
+## Philosophy
 
-If you require some different behaviour, please do raise an issue or pull request in GitHub in the first instance rather than simply just forking, and we'll try to accommodate it promptly (so as to reduce fragmentation of functionality).
+This plugin is designed to be simple and focused on a single responsibility: validating JWT tokens.
+
+It upholds the original philosophy of JWTs: that a user's privileges can be encoded directly in the token and cryptographically signed by the issuer, allowing for stateless validation. There is therefore a deliberate design decision not to support the lookup of permissions from external databases or policy engines. The advantages of this approach are that it adds no latency to the critical path of every request and requires no external dependency at runtime. The trade-off is that if a user's privileges change, a new token must be issued to reflect this (i.e. the user must log in again).
+
+Nothing prevents downstream backends from performing more dynamic or granular access control lookups (e.g. against an ACL database) once a request has been authenticated by this middleware. However, that is intentionally out of scope here. If you require a JWT middleware with integration to a policy engine (such as Open Policy Agent), alternatives exist: for example [traefik-jwt-plugin](https://github.com/traefik-plugins/traefik-jwt-plugin).
+
+## Enhancements and Contributing
+
+If you require some different behaviour, please do raise an issue in the first instance and we'll try to accommodate it promptly.
+If contributing:
+
+* Please ensure tests are added/updated and coverage remains at 100%.
+* Please respect the existing code style, especially that all identifiers are descriptive and unabbreviated (sorry Rob P).
+
+If you find this plugin useful, please consider giving it a star on [GitHub](https://github.com/agilezebra/jwt-middleware).
 
 ## Acknowledgements
 
