@@ -429,6 +429,7 @@ Nothing prevents downstream backends from performing more dynamic or granular ac
 ## Enhancements and Contributing
 
 If you require some different behaviour, please do raise an issue in the first instance and we'll try to accommodate it promptly.
+
 If contributing:
 
 * Please ensure tests are added/updated and coverage remains at 100%.
