@@ -28,7 +28,7 @@ jobs:
 
       - name: Vendor
         run: |
-          go get .
+          go mod download
           go mod vendor
 
       - name: Test
