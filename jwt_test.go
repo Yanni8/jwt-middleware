@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -632,6 +633,60 @@ func TestServeHTTP(tester *testing.T) {
 			Claims:     `{"aud": "test"}`,
 			Method:     jwt.SigningMethodES512,
 			HeaderName: "Authorization",
+		},
+		{
+			Name:   "SigningMethodEdDSA",
+			Expect: http.StatusOK,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+		},
+		{
+			Name:   "SigningMethodEdDSA with missing kid",
+			Expect: http.StatusOK,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+			Actions:    map[string]string{"set:kid": ""},
+		},
+		{
+			Name:   "SigningMethodEdDSA with bad x",
+			Expect: http.StatusUnauthorized,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+			Actions:    map[string]string{"set:x": invalid},
+		},
+		{
+			Name:   "SigningMethodEdDSA with wrong length x",
+			Expect: http.StatusUnauthorized,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+			Actions:    map[string]string{"set:x": "AA"},
+		},
+		{
+			Name:   "SigningMethodEdDSA with missing crv",
+			Expect: http.StatusUnauthorized,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+			Actions:    map[string]string{"set:crv": ""},
 		},
 		{
 			Name:   "SigningMethodRS256 with missing kid",
@@ -2173,6 +2228,20 @@ func createTokenAndSaveKey(test *Test, config *Config) string {
 				panic(err)
 			}
 		}
+	case jwt.SigningMethodEdDSA:
+		// Ed25519 / EdDSA
+		public, private, err = ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		der, err := x509.MarshalPKIXPublicKey(public)
+		if err != nil {
+			panic(err)
+		}
+		publicPEM = string(pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: der,
+		}))
 	default:
 		panic("Unsupported signing method")
 	}
