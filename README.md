@@ -21,7 +21,7 @@ experimental:
   plugins:
     jwt:
       moduleName: github.com/agilezebra/jwt-middleware
-      version: v1.4.2
+      version: v1.4.3
 ```
 
 1b. or with command-line options:
@@ -30,7 +30,7 @@ experimental:
 command:
   ...
   - "--experimental.plugins.jwt.modulename=github.com/agilezebra/jwt-middleware"
-  - "--experimental.plugins.jwt.version=v1.4.2"
+  - "--experimental.plugins.jwt.version=v1.4.3"
 ```
 
 2a. Configure and activate the plugin as a middleware, either in your dynamic traefik config:
@@ -128,7 +128,7 @@ Name | Description
 `unauthenticatedMethods` | A list of HTTP methods that should be allowed to pass without requiring authentication. Default: empty, meaning no methods are exempt. If specified, any requests with a method in this list will not require a valid token. Methods are matched case-insensitively.
 `insecureSkipVerify` | A list of issuers' domains for which TLS certificates should not be verified (i.e. use `InsecureSkipVerify: true`). Only the hostname/domain should be specified (i.e. no scheme or trailing slash). Applies to both the openid-configuration and jwks calls.
 `rootCAs` | One or more additional root certificate authorities, each expressed either inline in PEM format, or as a path to a file, to be combined with the system cert pool when verifying server certificates.
-`validMethods` | A list of signing algorithms that the plugin will accept. Default: `["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512"]`. This option can be used to explicitly disable undesirable algorithms, such as removing all HMAC algorithms (`HS256`, `HS384`, `HS512`) when only asymmetric signatures should be accepted from trusted issuers. See [Algorithm Confusion Protection](#algorithm-confusion-protection) below for security considerations.
+`validMethods` | A list of signing algorithms that the plugin will accept. Default: `["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512", "EdDSA"]`. This option can be used to explicitly disable undesirable algorithms, such as removing all HMAC algorithms (`HS256`, `HS384`, `HS512`) when only asymmetric signatures should be accepted from trusted issuers. See [Algorithm Confusion Protection](#algorithm-confusion-protection) below for security considerations.
 
 ### Template Interpolation
 
