@@ -667,6 +667,17 @@ func TestServeHTTP(tester *testing.T) {
 			Actions:    map[string]string{"set:x": invalid},
 		},
 		{
+			Name:   "SigningMethodEdDSA with wrong length x",
+			Expect: http.StatusUnauthorized,
+			Config: `
+				require:
+					aud: test`,
+			Claims:     `{"aud": "test"}`,
+			Method:     jwt.SigningMethodEdDSA,
+			HeaderName: "Authorization",
+			Actions:    map[string]string{"set:x": "AA"},
+		},
+		{
 			Name:   "SigningMethodEdDSA with missing crv",
 			Expect: http.StatusUnauthorized,
 			Config: `
@@ -2219,13 +2230,11 @@ func createTokenAndSaveKey(test *Test, config *Config) string {
 		}
 	case jwt.SigningMethodEdDSA:
 		// Ed25519 / EdDSA
-		pub, priv, err := ed25519.GenerateKey(rand.Reader)
+		public, private, err = ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
-		private = priv
-		public = pub
-		der, err := x509.MarshalPKIXPublicKey(pub)
+		der, err := x509.MarshalPKIXPublicKey(public)
 		if err != nil {
 			panic(err)
 		}
