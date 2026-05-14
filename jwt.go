@@ -89,7 +89,7 @@ type TemplateVariables map[string]string
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		ValidMethods: []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512"},
+		ValidMethods: []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "HS256", "HS384", "HS512", "EdDSA"},
 		CookieName:   "Authorization",
 		HeaderName:   "Authorization",
 		ForwardToken: true,

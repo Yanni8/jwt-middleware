@@ -4,6 +4,7 @@ package jwt_middleware
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -118,6 +119,23 @@ func FetchJWKS(url string, client *http.Client) (map[string]any, error) {
 					Y:     new(big.Int).SetBytes(yBytes),
 				}
 			}
+		case "OKP":
+			{
+				if jwk.Crv != "Ed25519" {
+					log.Printf("unsupported OKP curve: %v for kid: %v", jwk.Crv, jwk.Kid)
+					break
+				}
+				xBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(jwk.X, "="))
+				if err != nil {
+					log.Printf("error decoding X: %v for kid: %v", err, jwk.Kid)
+					break
+				}
+				if len(xBytes) != ed25519.PublicKeySize {
+					log.Printf("invalid Ed25519 key length %d for kid: %v", len(xBytes), jwk.Kid)
+					break
+				}
+				keys[jwk.Kid] = ed25519.PublicKey(xBytes)
+			}
 		}
 	}
 
@@ -133,6 +151,8 @@ func JWKThumbprint(jwk JSONWebKey) string {
 		text = fmt.Sprintf(`{"e":"%s","kty":"RSA","n":"%s"}`, jwk.E, jwk.N)
 	case "EC":
 		text = fmt.Sprintf(`{"crv":"P-256","kty":"EC","x":"%s","y":"%s"}`, jwk.X, jwk.Y)
+	case "OKP":
+		text = fmt.Sprintf(`{"crv":"%s","kty":"OKP","x":"%s"}`, jwk.Crv, jwk.X)
 	}
 	bytes := sha256.Sum256([]byte(text))
 	return base64.RawURLEncoding.EncodeToString(bytes[:])
