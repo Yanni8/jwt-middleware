@@ -68,7 +68,7 @@ Notes:
 * If you use the Kubernetes Middleware CRD, you should not use the `@file` suffix in the middleware references below.
 * A drawback of using the Kubernetes Middleware CRD is that you cannot use YAML aliases and anchors to keep shared config DRY across middleware definitions, as shown in the [example below](#configuring-api-and-interactive-endpoints-together-effectively).
 
-3a. Use the middleware in services via docker-compose labels
+3a. Use the middleware in services via docker compose labels
 
 ```yaml
   labels:
