@@ -14,6 +14,7 @@ This is a middleware plugin for [Traefik](https://github.com/containous/traefik)
 
 ## Configuration
 
+### Add
 1a. Add the plugin to traefik, either in your static traefik config file:
 
 ```yaml
@@ -32,6 +33,8 @@ command:
   - "--experimental.plugins.jwt.modulename=github.com/agilezebra/jwt-middleware"
   - "--experimental.plugins.jwt.version=v1.4.3"
 ```
+
+### Configure
 
 2a. Configure and activate the plugin as a middleware, either in your dynamic traefik config:
 
@@ -67,6 +70,8 @@ Notes:
 
 * If you use the Kubernetes Middleware CRD, you should not use the `@file` suffix in the middleware references below.
 * A drawback of using the Kubernetes Middleware CRD is that you cannot use YAML aliases and anchors to keep shared config DRY across middleware definitions, as shown in the [example below](#configuring-api-and-interactive-endpoints-together-effectively).
+
+### Use
 
 3a. Use the middleware in services via docker compose labels
 
